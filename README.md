@@ -37,6 +37,8 @@ https://github.com/zxcvbnmkj/greedy-snake-51-TFT/assets/133875139/d1c5b55c-bf1f-
 
 6.判定死亡：当蛇头碰到屏幕边缘，碰到码物，或者碰到蛇自己的身体时，蛇死亡。游戏结束
 
+## 相关项目
+
 ```
 本项目继承自：https://github.com/zxcvbnmkj/simulation-furniture-control-based-on-51-microcontroller
 ```
