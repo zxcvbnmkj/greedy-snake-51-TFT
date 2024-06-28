@@ -6,10 +6,23 @@
 
 
 
-## 游戏界面状态显示
-![image](https://github.com/zxcvbnmkj/greedy-snake-51-TFT/assets/133875139/0a2deca1-b72d-45e4-bbaa-b88d2711d8a9)
+https://github.com/zxcvbnmkj/greedy-snake-51-TFT/assets/133875139/1de6fba9-b811-4247-98eb-cfecd8e8ecc9
 
-![image](https://github.com/zxcvbnmkj/greedy-snake-51-TFT/assets/133875139/aaf33ee1-7e49-4ae4-8af3-0684599ff44e)
+
+
+https://github.com/zxcvbnmkj/greedy-snake-51-TFT/assets/133875139/d1c5b55c-bf1f-429a-b712-5ca323a90d77
+
+
+
+## 游戏界面状态显示
+初始状态：
+
+![image](https://github.com/zxcvbnmkj/greedy-snake-51-TFT/assets/133875139/14becb0e-f17a-4ebd-8082-3304620c0f99)
+
+结束状态：
+
+![image](https://github.com/zxcvbnmkj/greedy-snake-51-TFT/assets/133875139/be5bdf0a-6c51-47e8-9899-14b16d76f754)
+
 
 ## 游戏处理
 1.接电以后，初始化游戏，在游戏区域内的固定位置出现初始贪吃蛇，蛇身长度为三个单位。并且在随机位置出现第一个豆子。
@@ -19,4 +32,6 @@
 5.分数：吃1个豆子增加1分
 6.判定死亡：当蛇头碰到屏幕边缘，碰到码物，或者碰到蛇自己的身体时，蛇死亡。游戏结束
 
+```
 本项目继承自：https://github.com/zxcvbnmkj/simulation-furniture-control-based-on-51-microcontroller
+```
