@@ -1,0 +1,318 @@
+C51 COMPILER V9.60.0.0   TOUCH                                                             12/19/2020 12:40:30 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE TOUCH
+OBJECT MODULE PLACED IN .\output\touch.obj
+COMPILER INVOKED BY: D:\2filerj\keil5ForC51\C51\BIN\C51.EXE APP\touch\touch.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\Us
+                    -er;.\Public;.\GUI;.\APP\tftlcd;.\APP\touch) DEBUG OBJECTEXTEND PRINT(.\output\touch.lst) TABS(2) OBJECT(.\output\touch.o
+                    -bj)
+
+line level    source
+
+   1          /*#include "touch.h"
+   2          #include "tftlcd.h"
+   3          #include "uart.h"
+   4          
+   5          XPT_XY xpt_xy;   //定义一个全局变量保存X、Y的值
+   6          
+   7          
+   8          
+   9          void TOUCH_SPI_Start(void)
+  10          {
+  11            TOUCH_CLK = 0;
+  12            TOUCH_CS  = 1;
+  13            TOUCH_DIN = 1;
+  14            TOUCH_CLK = 1;
+  15            TOUCH_CS  = 0;    
+  16          }
+  17          
+  18          void TOUCH_SPI_Write(u8 dat)
+  19          {
+  20            u8 i;
+  21            TOUCH_CLK = 0;
+  22            for(i=0; i<8; i++)
+  23            {
+  24              TOUCH_DIN = dat >>7;    //放置最高位
+  25              dat <<= 1;
+  26              TOUCH_CLK = 0;      //上升沿放置数据
+  27          
+  28              TOUCH_CLK = 1;
+  29          
+  30            }
+  31          }
+  32          
+  33          u16 TOUCH_SPI_Read(void)
+  34          {
+  35            u16 i, dat=0;
+  36            TOUCH_CLK = 0;
+  37            for(i=0; i<12; i++)   //接收12位数据
+  38            {
+  39              dat <<= 1;
+  40          
+  41              TOUCH_CLK = 1;
+  42              TOUCH_CLK = 0;
+  43          
+  44              dat |= TOUCH_DOUT;
+  45          
+  46            }
+  47            return dat; 
+  48          }
+  49          
+  50          #define XY_READ_TIMS  10       //读取的次数
+  51          
+  52          u16 TOUCH_XPT_ReadData(u8 cmd)
+  53          {
+C51 COMPILER V9.60.0.0   TOUCH                                                             12/19/2020 12:40:30 PAGE 2   
+
+  54            u8 i, j;
+  55            u16 readValue[XY_READ_TIMS];
+  56            long endValue;
+  57          
+  58            TOUCH_CLK = 0;    //先拉低时间
+  59            TOUCH_CS  = 0;    //选中芯片
+  60            
+  61            for(i=0; i<XY_READ_TIMS; i++)   //读取XY_READ_TIMS次结果
+  62            { 
+  63              TOUCH_SPI_Write(cmd);  //发送转换命令
+  64              //delay_10us();
+  65              for(j=6; j>0; j--);   //延时等待转换结果
+  66              TOUCH_CLK = 1;    //发送一个时钟周期，清除BUSY
+  67              _nop_();
+  68              _nop_();
+  69              TOUCH_CLK = 0;
+  70              _nop_();
+  71              _nop_();
+  72            
+  73              readValue[i] = TOUCH_SPI_Read();
+  74            }
+  75            TOUCH_CS = 1; //释放片选
+  76          
+  77            //---软件滤波---//
+  78            //---先大到小排序，除去最高值，除去最低值，求其平均值---//
+  79              for(i=0; i<XY_READ_TIMS - 1; i++) //从大到小排序
+  80            {
+  81              for(j= i+1; j<XY_READ_TIMS; j++)
+  82              {
+  83                if(readValue[i] < readValue[j])
+  84                {
+  85                  endValue = readValue[i];
+  86                  readValue[i] = readValue[j];
+  87                  readValue[j] = endValue;
+  88                }  
+  89              }
+  90            }
+  91          //  if((readValue[2] - readValue[3]) > 5)
+  92          //  {
+  93          //    return 0;
+  94          //  }
+  95            endValue = 0;
+  96            for(i=2; i<XY_READ_TIMS-2; i++)      
+  97            {
+  98              endValue += readValue[i]; 
+  99            }
+ 100            endValue = endValue/ (XY_READ_TIMS - 4);//求平均值
+ 101          
+ 102            return endValue;
+ 103          }
+ 104          
+ 105          
+ 106          
+ 107          u8 TOUCH_XPT_ReadXY(void)
+ 108          { 
+ 109            u16 x1, x2, x, y1, y2, y;
+ 110          
+ 111            TOUCH_SPI_Start();
+ 112            //---分别读两次X值和Y值, 交叉着读可以提高一些读取精度---//
+ 113            x1 = TOUCH_XPT_ReadData(XPT_CMD_X);
+ 114            y1 = TOUCH_XPT_ReadData(XPT_CMD_Y);
+ 115            x2 = TOUCH_XPT_ReadData(XPT_CMD_X);
+C51 COMPILER V9.60.0.0   TOUCH                                                             12/19/2020 12:40:30 PAGE 3   
+
+ 116            y2 = TOUCH_XPT_ReadData(XPT_CMD_Y); 
+ 117          
+ 118          
+ 119            //---求取X值的差值---//
+ 120            if (x1 > x2)
+ 121            {
+ 122              x = x1 - x2;
+ 123            }
+ 124            else
+ 125            {
+ 126              x = x2 - x1;
+ 127            }
+ 128          
+ 129            //---求取Y值的差值---//
+ 130            if (y1 > y2)
+ 131            {
+ 132              y = y1 - y2;
+ 133            }
+ 134            else
+ 135            {
+ 136              y = y2 - y1;
+ 137            }
+ 138          
+ 139            //---判断差值是否大于50，大于就返回0，表示读取失败---//
+ 140            if((x > 50) || (y > 50))  
+ 141            {
+ 142              return 0;
+ 143            }
+ 144          
+ 145            //---求取两次读取值的平均数作为读取到的XY值---//
+ 146            xpt_xy.x = (x1 + x2) / 2;
+ 147            xpt_xy.y = (y1 + y2) / 2;
+ 148          
+ 149            xpt_xy.x &= 0xFFF0; //去掉低四位
+ 150            xpt_xy.y &= 0xFFF0;
+ 151             
+ 152            //---确定XY值的范围，用在触摸屏大于TFT时---//
+ 153            if((xpt_xy.x < 100) || (xpt_xy.y > 3800))
+ 154            {
+ 155              return 0;
+ 156            }
+ 157          
+ 158            return 1;  // 返回1，表示读取成功
+ 159          }
+ 160          
+ 161          //返回1：触摸按下
+ 162          //0:无触摸
+ 163          u8 TOUCH_Scan(void)
+ 164          {
+ 165            u8 res=0;
+ 166            u32 temp;
+ 167          
+ 168            if(TOUCH_XPT_ReadXY())
+ 169            {
+ 170              //--如果触摸跟显示发生偏移，可以根据显示AD值--//
+ 171              //--调整下面公式里面的数值--//
+ 172              if(tftlcd_data.dir==0)
+ 173              {
+ 174          #ifdef TFT20_HX8309
+ 175                xpt_xy.lcdx = xpt_xy.x;
+ 176                xpt_xy.lcdx = (xpt_xy.lcdx - 250) * 180 / 3700; 
+ 177                xpt_xy.lcdy = xpt_xy.y;
+C51 COMPILER V9.60.0.0   TOUCH                                                             12/19/2020 12:40:30 PAGE 4   
+
+ 178                xpt_xy.lcdy = (xpt_xy.lcdy - 350) * 250 / 3500;
+ 179          #endif
+ 180          
+ 181          #ifdef TFT22_ILI9225B
+ 182                xpt_xy.lcdx = xpt_xy.x;
+ 183                xpt_xy.lcdx = (xpt_xy.lcdx - 250) * 180 / 3700; 
+ 184                xpt_xy.lcdy = xpt_xy.y;
+ 185                xpt_xy.lcdy = (xpt_xy.lcdy - 350) * 250 / 3500;
+ 186          #endif
+ 187          
+ 188          #ifdef TFT22_R61503B
+ 189                xpt_xy.lcdx = xpt_xy.x;
+ 190                xpt_xy.lcdx = (xpt_xy.lcdx - 250) * 180 / 3700; 
+ 191                xpt_xy.lcdy = xpt_xy.y;
+ 192                xpt_xy.lcdy = (xpt_xy.lcdy - 350) * 250 / 3500;
+ 193          #endif
+ 194          
+ 195          #ifdef TFT24_ST7781R
+ 196                xpt_xy.lcdx=xpt_xy.x;
+ 197                xpt_xy.lcdx=((xpt_xy.lcdx - 336)*240)/3328;
+ 198                xpt_xy.lcdy=xpt_xy.y; 
+ 199                xpt_xy.lcdy =((xpt_xy.lcdy - 240) *320)/3412;
+ 200          #endif  
+ 201            
+ 202          #ifdef TFT26_R61509V
+ 203                xpt_xy.lcdx=xpt_xy.x;
+ 204                xpt_xy.lcdx=((xpt_xy.lcdx - 240)*260)/3850;
+ 205                xpt_xy.lcdy=xpt_xy.y; 
+ 206                xpt_xy.lcdy =((xpt_xy.lcdy - 200)*420)/3950;
+ 207          #endif
+ 208          
+ 209          #ifdef TFT26_ILI9325D
+ 210                xpt_xy.lcdx=xpt_xy.x;
+ 211                xpt_xy.lcdx=((xpt_xy.lcdx - 600)*297)/3550;
+ 212                xpt_xy.lcdy=xpt_xy.y; 
+ 213                xpt_xy.lcdy =((xpt_xy.lcdy - 250)*362)/3850;
+ 214          #endif
+ 215          
+ 216              }
+ 217              else
+ 218              {
+ 219          #ifdef TFT20_HX8309
+ 220              xpt_xy.lcdx = 4096-xpt_xy.y;
+ 221              xpt_xy.lcdx = (xpt_xy.lcdx - 350) * 250 / 3500;
+ 222              xpt_xy.lcdy = xpt_xy.x;
+ 223              xpt_xy.lcdy = (xpt_xy.lcdy - 250) * 180 / 3700;
+ 224          #endif
+ 225          
+ 226          #ifdef TFT22_ILI9225B
+ 227              xpt_xy.lcdx = 4096-xpt_xy.y;
+ 228              xpt_xy.lcdx = (xpt_xy.lcdx - 350) * 250 / 3500;
+ 229              xpt_xy.lcdy = xpt_xy.x;
+ 230              xpt_xy.lcdy = (xpt_xy.lcdy - 250) * 180 / 3700;
+ 231          #endif
+ 232          
+ 233          #ifdef TFT22_R61503B
+ 234              xpt_xy.lcdx = 4096-xpt_xy.y;
+ 235              xpt_xy.lcdx = (xpt_xy.lcdx - 350) * 250 / 3500;
+ 236              xpt_xy.lcdy = xpt_xy.x;
+ 237              xpt_xy.lcdy = (xpt_xy.lcdy - 250) * 180 / 3700;
+ 238          #endif
+ 239          
+C51 COMPILER V9.60.0.0   TOUCH                                                             12/19/2020 12:40:30 PAGE 5   
+
+ 240          #ifdef TFT24_ST7781R
+ 241                xpt_xy.lcdx=xpt_xy.y;
+ 242                xpt_xy.lcdx =((xpt_xy.lcdx - 240) *320)/3412;
+ 243                xpt_xy.lcdy=4096-xpt_xy.x; 
+ 244                xpt_xy.lcdy=((xpt_xy.lcdy - 336)*240)/3328;
+ 245          #endif
+ 246          
+ 247          #ifdef TFT26_R61509V
+ 248                xpt_xy.lcdx=xpt_xy.y;
+ 249                xpt_xy.lcdx=((xpt_xy.lcdx - 200)*420)/3950;
+ 250                xpt_xy.lcdy=4096 - xpt_xy.x; 
+ 251                xpt_xy.lcdy =((xpt_xy.lcdy - 240)*260)/3850;
+ 252          #endif  
+ 253          
+ 254          #ifdef TFT26_ILI9325D
+ 255                xpt_xy.lcdx=xpt_xy.y;
+ 256                xpt_xy.lcdx=((xpt_xy.lcdx - 250)*362)/3850;
+ 257                xpt_xy.lcdy=4096 - xpt_xy.x; 
+ 258                xpt_xy.lcdy =((xpt_xy.lcdy - 600)*297)/3550;
+ 259          #endif  
+ 260                    
+ 261              }
+ 262           
+ 263          
+ 264          //    if(tftlcd_data.dir==0)
+ 265          //    {
+ 266          //      xpt_xy.lcdx=xpt_xy.lcdx;
+ 267          //      xpt_xy.lcdy=xpt_xy.lcdy;  
+ 268          //    }
+ 269          //    else
+ 270          //    {   
+ 271          //      temp=xpt_xy.lcdx;
+ 272          //      xpt_xy.lcdx=xpt_xy.lcdy;
+ 273          //      xpt_xy.lcdy=tftlcd_data.height-temp;
+ 274          //    }
+ 275          
+ 276          //    printf("ad_x=%d   ad_y=%d\r\n",xpt_xy.x,xpt_xy.y);
+ 277          //    printf("lcdx=%d   lcdy=%d\r\n",xpt_xy.lcdx,xpt_xy.lcdy);
+ 278               res=1;
+ 279               xpt_xy.sta=1;
+ 280            }
+ 281            else
+ 282              xpt_xy.sta=0; 
+ 283            return res; 
+ 284          }
+ 285          */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   ----    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

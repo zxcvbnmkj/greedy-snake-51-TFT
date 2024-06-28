@@ -1,0 +1,249 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              01/14/2022 13:18:28 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\output\main.obj
+COMPILER INVOKED BY: D:\2filerj\keil5ForC51\C51\BIN\C51.EXE User\main.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\User;.\P
+                    -ublic;.\GUI;.\APP\tftlcd;.\APP\touch) DEBUG OBJECTEXTEND PRINT(.\output\main.lst) TABS(2) OBJECT(.\output\main.obj)
+
+line level    source
+
+   1          #include "public.h"  //Çø·ÖÃ¿Ò»½ÚµÄ×ø±êÎ»ÖÃºÍ´òÓ¡Î»ÖÃ£¬ºóÕß=Ç°Õß-3£¬ºá×Ý×ø±ê¶¼ÊÇ
+   2          #include "tftlcd.h"
+   3          #include "gui.h"
+   4          #include "stdlib.h"
+   5          #define SNAKE_Max_Long 100
+   6          #define SNAKE_head_x 88//´òÓ¡84+1,/7=12
+   7          #define SNAKE_head_y 176//´òÓ¡154+19,/7=22
+   8          #define SNAKE_firstBody_x 88//´òÓ¡84+1
+   9          #define SNAKE_firstBody_y 183//´òÓ¡161+19,/7=23
+  10          #define rect_start_x 0  // w(1,175),h(19,200)
+  11          #define rect_start_y 18
+  12          #define rect_width 176  //174,25¸ñ.¸ñÊý*7-1=ÏñËØ³¤¶È
+  13          #define rect_height 183//181,26¸ñ
+  14          #define color RED
+  15          #define SPEED 5000
+  16          //#define headcolor GREEN
+  17          //sbit key1=P0^0;//ÉÏ
+  18          //sbit key2=P0^1;//ÏÂ
+  19          //sbit key3=P0^2;//×ó
+  20          //sbit key4=P0^3;//ÓÒ
+  21          //sbit key5=P0^4;//ÖØÐÂ¿ªÊ¼
+  22          unsigned char direction;//·½Ïò£¬³õÊ¼Îª1¡£Îª1´ú±íÏòÉÏ£¬2ÏÂ£¬3 ×ó£¬4ÓÒ
+  23          u8 directionBackUP;//·½ÏòµÄ±¸·Ý£¬´æ´¢ÉÏÒ»´ÎµÄ·½Ïò
+  24          struct 
+  25          {
+  26            u8 X[SNAKE_Max_Long];//¸÷½ÚµÄºá×ø±ê
+  27            u8 Y[SNAKE_Max_Long];//¸÷½ÚµÄ×Ý×ø±ê
+  28            u8 Long;  
+  29            u8 Self;//ÊÇ·ñ×²µ½×Ô¼º£¬0ÎªÃ»ÓÐ£¬1ÓÐ 
+  30            u8 Score;
+  31            u8 headX;//Í·µÄºá×ø±ê
+  32            u8 headY; //Í·µÄ×Ý×ø±ê
+  33          }Snake;//Éß½á¹¹Ìå
+  34          
+  35          struct 
+  36          {
+  37            u8 printX;
+  38            u8 printY;
+  39            u8  numx;
+  40            u8 numy;
+  41          }Food;  //Ê³Îï½á¹¹Ìå
+  42            
+  43          void showInit()
+  44          {
+  45   1        Snake.headX=SNAKE_head_x;//ÒÔÏÂ¶Ô½á¹¹Ìå¸³Öµ
+  46   1        Snake.headY=SNAKE_head_y;
+  47   1        Snake.Score=0;
+  48   1        Snake.Self=0;
+  49   1        Snake.Long=2;
+  50   1        Snake.X[0]=SNAKE_head_x;
+  51   1        Snake.Y[0]=SNAKE_head_y;
+  52   1        Snake.X[1]=SNAKE_firstBody_x;
+  53   1        Snake.Y[1]=SNAKE_firstBody_y;
+  54   1        
+C51 COMPILER V9.60.0.0   MAIN                                                              01/14/2022 13:18:28 PAGE 2   
+
+  55   1        TFTLCD_Init();
+  56   1        FRONT_COLOR=RED;//¿í174£¬ÓÐ25¸ö¸ñ×Ó,±àºÅ0~24¡£¸ß181£¬26¸ñ£¬±àºÅ0~25
+  57   1        LCD_ShowString(4,0,tftlcd_data.width,tftlcd_data.height,16,"Greedy Snake Game");//y:0~15
+  58   1        gui_draw_rectangle(rect_start_x,rect_start_y,rect_width,rect_height,BLUE);//»æÖÆÒ»¸ö¾ØÐÎ¿ò(1,19)
+  59   1        LCD_ShowString(4,203,tftlcd_data.width,tftlcd_data.height,16,"Score:");//ÆÁÄ»y×ø±êÊÇ0~219
+  60   1        LCD_ShowNum(50,203,Snake.Score,2,16);
+  61   1        gui_fill_rectangle(SNAKE_head_x-3,SNAKE_head_y-3,6,6,color);//´òÓ¡Í·
+  62   1        gui_fill_rectangle(SNAKE_firstBody_x-3,SNAKE_firstBody_y-3,6,6,color);//´òÓ¡Ò»½ÚÉíÌå
+  63   1      }
+  64          void Time0_Init()          //¶¨Ê±Æ÷³õÊ¼»¯
+  65          {
+  66   1        TMOD=0X21;//¶¨Ê±Æ÷0Îª0001£¬¶¨Ê±Æ÷1Îª0010¡£TMOD²»ÄÜÎ»Ñ°Ö·£¬ËùÒÔÔÚÕâÀïÒ»´ÎÐÔ¸³Öµ¡£   
+  67   1        EA=1;//´ò¿ª×ÜÖÐ¶Ï
+  68   1        ET0=1;//´ò¿ª¶¨Ê±Æ÷0µÄÖÐ¶Ï
+  69   1        TH0  = 0xfe;
+  70   1        TL0  = 0x33; //11.0592MZ¾§Õñ£¬0.5ms
+  71   1        TR0=1; //¶¨Ê±Æ÷¿ªÊ¼
+  72   1      }
+  73          void foodProduce()
+  74          {
+  75   1        int f,u;
+  76   1        do
+  77   1        {
+  78   2        f=0;
+  79   2        Food.numx=TL1%25;//Óàn¼´²úÉú0µ½n-1µÄÊý,0~24
+  80   2        Food.numy=TL1%26;//0~25
+  81   2        Food.printX=Food.numx*7+1;
+  82   2        Food.printY=Food.numy*7+19;
+  83   2        for(u=0;u<Snake.Long-1;u++)
+  84   2          if(Food.printX==Snake.X[u]&&Food.printY==Snake.Y[u])f=1;
+  85   2        }while(f);//ÕâÊÇ·ÀÖ¹¸Õ¸ÕÊ³ÎïºÍÉßÖØºÏ
+  86   1        gui_fill_rectangle(Food.printX,Food.printY,6,6,GRED);
+  87   1      }
+  88          //void keyout()
+  89          //{
+  90          //  unsigned int a;
+  91          //  key1=1;
+  92          //  key2=1;
+  93          //  key3=1;
+  94          //  key4=1;
+  95          //  //while(key1==1&&key2==1&&key3==1&&key4==1);//Î´°´ÏÂÔòÍ£ÔÚÕâ
+  96          //  if(key1==0||key2==0||key3==0||key4==0)//key=0ËµÃ÷°´¼ü±»°´ÏÂÁË
+  97          //  {
+  98          //    for(a=0;a<1000;a++);//ÑÓÊ±Ô¼10ms
+  99          //    if(key1==0||key2==0||key3==0||key4==0)//ÔÙ´Î¼ì²âÊÇ·ñÕæµÄÓÐ°´¼ü°´ÏÂ
+ 100          //    {
+ 101          //      if(key1==0){direction=1;}
+ 102          //      if(key2==0){direction=2;}
+ 103          //      if(key3==0){direction=3;}
+ 104          //      if(key4==0){direction=4;}
+ 105          //    }
+ 106          //    while(!(key1==1&&key2==1&&key3==1&&key4==1));//Ö»ÒªÈ«²¿°´¼üµçÆ½¶¼Îª1²Å¿ÉÍ¨¹ý¸ÃÑ­»·
+ 107          //    for(a=0;a<1000;a++);//ÑÓÊ±Ô¼10ms
+ 108          //    while(!(key1==1&&key2==1&&key3==1&&key4==1));//ÔÙ´Î¼ì²â
+ 109          //  }
+ 110          //}
+ 111          void Display_dead()//ÏÔÊ¾ËÀÍö½çÃæ
+ 112          {
+ 113   1        LCD_Clear(BLACK);
+ 114   1        LCD_ShowString(30,70,tftlcd_data.width,tftlcd_data.height,24,"GAME OVER!");
+ 115   1        LCD_ShowString(20,110,tftlcd_data.width,tftlcd_data.height,16,"YOUR SORCE IS");
+ 116   1        LCD_ShowNum(130,105,Snake.Score,2,24);
+C51 COMPILER V9.60.0.0   MAIN                                                              01/14/2022 13:18:28 PAGE 3   
+
+ 117   1        LCD_ShowString(0,135,tftlcd_data.width,tftlcd_data.height,12,"Press K1 to restart the game!");
+ 118   1      }
+ 119          void snakeMove()
+ 120          {
+ 121   1        u8 last_x,last_y,count,e;
+ 122   1        direction=1;
+ 123   1        while(Snake.headX-3>rect_start_x&&Snake.headX+3<rect_start_x+rect_width&&Snake.headY-3>rect_start_y&&Snak
+             -e.headY+3<rect_start_y+rect_height&&Snake.Self==0)
+ 124   1        {//ÈôÉßÎ´Ô½½ç
+ 125   2          directionBackUP=direction;
+ 126   2          //keyout();
+ 127   2          
+ 128   2          //°Ñ·½Ïò»Ö¸´³ÉÔ­À´µÄ·½ÏòÁË£¬¼´µÈÓÚ£¬´Ë´Î°´ÏÂµÄ°´¼üÎÞÐ§
+ 129   2          if(direction==1&&Snake.Y[0]-Snake.Y[1]==7)direction=directionBackUP;
+ 130   2          if(direction==2&&Snake.Y[0]-Snake.Y[1]==-7)direction=directionBackUP;
+ 131   2          if(direction==3&&Snake.X[0]-Snake.X[1]==7)direction=directionBackUP;
+ 132   2          if(direction==4&&Snake.X[0]-Snake.X[1]==-7)direction=directionBackUP;
+ 133   2          
+ 134   2          switch(direction)
+ 135   2          {
+ 136   3            case 1:{Snake.headY=Snake.headY-7;break;}
+ 137   3            case 2:{Snake.headY=Snake.headY+7;break;}
+ 138   3            case 3:{Snake.headX=Snake.headX-7;break;}
+ 139   3            case 4:{Snake.headX=Snake.headX+7;break;}
+ 140   3          }
+ 141   2          last_x=Snake.X[Snake.Long-1];last_y=Snake.Y[Snake.Long-1];//±£´æÆð×îºóÒ»½ÚµÄ×ø±ê
+ 142   2          for(count=1;count<Snake.Long;count++)//count=n-1Ê±Ñ­»·½áÊø£¬ÒòÎª´ËÊ±a[n-count-1]Îªa[0]
+ 143   2          {
+ 144   3            Snake.X[Snake.Long-count]=Snake.X[Snake.Long-count-1]; //a[n-1]ÊÇ×îºóÒ»½Ú£¬¼õ¼¸¾ÍÊÇµ¹ÊýµÚ¼¸½Ú
+ 145   3            Snake.Y[Snake.Long-count]=Snake.Y[Snake.Long-count-1];
+ 146   3          }
+ 147   2          Snake.X[0]=Snake.headX;Snake.Y[0]=Snake.headY;
+ 148   2          gui_fill_rectangle(Snake.headX-3,Snake.headY-3,6,6,color);//´òÓ¡Í·
+ 149   2          //gui_fill_rectangle(Snake.X[1]-3,Snake.Y[1]-3,6,6,color);//´òÓ¡ÉíÌå°ÑÍ·¸Çµô
+ 150   2          
+ 151   2          if(!(Snake.headX==Food.printX+3&&Snake.headY==Food.printY+3))//ÈôÉßÍ·×ø±ê²»µÈÓÚÊ³Îï×ø±ê£¬¾Í°Ñ×îºóÒ»½ÚÉßÕ
+             -Úµô
+ 152   2          {
+ 153   3             gui_fill_rectangle(last_x-3,last_y-3,6,6,BLACK);
+ 154   3          }
+ 155   2          else
+ 156   2          {
+ 157   3            Snake.Long++;
+ 158   3            Snake.Score++;
+ 159   3            foodProduce();
+ 160   3            LCD_ShowNum(50,203,Snake.Score,2,16);
+ 161   3            Snake.X[Snake.Long-1]=last_x;
+ 162   3            Snake.Y[Snake.Long-1]=last_y;
+ 163   3            
+ 164   3          }
+ 165   2          for(e=4;e<Snake.Long;e++)//¼ì²éÉßÍ·×ø±êÊÇ·ñÓëÉßÉí×ø±êÖØºÏ£¬ÓÐÔò°ÑselfÖÃ1
+ 166   2            if(Snake.headX==Snake.X[e]&&Snake.headY==Snake.Y[e])//e=3,´ÓµÚÎå½Ú¿ªÊ¼¼ì²é£¬ÒòÎªÈôÖ»ÓÐ4½ÚÎÞÂÛÔõÃ´¶¼²»¿É
+             -ÄÜ×²µ½×Ô¼º
+ 167   2            {Snake.Self=1;break;}
+ 168   2          delay_ms(SPEED);
+ 169   2        }
+ 170   1        Display_dead();
+ 171   1      }
+ 172          void initUART()//²¨ÌØÂÊ9600
+ 173          {
+ 174   1        SCON=0x50;
+ 175   1        TH1=0XFA;
+C51 COMPILER V9.60.0.0   MAIN                                                              01/14/2022 13:18:28 PAGE 4   
+
+ 176   1        TL1=TH1;
+ 177   1        PCON=0X80;//Í¨¹ýÕâ¸ö¿ØÖÆSMODÎ»Îª1
+ 178   1        ES=1;
+ 179   1      //  EA=1;×ÜÖÐ¶ÏÔÚÖ®Ç°µÄº¯ÊýTime0_Init()ÖÐÒÑ´ò¿ª£¬ËùÒÔÕâÐÐ×¢ÊÍµô
+ 180   1        ET1=0;
+ 181   1        TR1=1;
+ 182   1      }
+ 183          void main()
+ 184          {
+ 185   1        Time0_Init();
+ 186   1        initUART();
+ 187   1        showInit();
+ 188   1        foodProduce();
+ 189   1        snakeMove();
+ 190   1      //  key5=1;
+ 191   1        while(1);
+ 192   1      }
+ 193          void Time0_Int() interrupt 1     //¶¨Ê±Æ÷0ÖÐ¶Ï,TF0=1Ê±´¥·¢£¬ÓÅÏÈ¼¶±È´®¿ÚÖÐ¶Ï¸ß
+ 194          {
+ 195   1        TH0  = 0xfe;                 //ÖØÐÂ¸³Öµ
+ 196   1        TL0  = 0x33;
+ 197   1      }
+ 198          void uart() interrupt 4//RI=1Ê±´¥·¢
+ 199          {
+ 200   1        unsigned char i;
+ 201   1        if(RI==1)
+ 202   1        {
+ 203   2          RI=0;
+ 204   2          i=SBUF;
+ 205   2        }
+ 206   1        switch(i)
+ 207   1        {
+ 208   2          case 0x01:{direction=1;break;}
+ 209   2          case 0x02:{direction=2;break;}
+ 210   2          case 0x03:{direction=3;break;}
+ 211   2          case 0x04:{direction=4;break;}
+ 212   2        }
+ 213   1        SBUF=direction;
+ 214   1        while(!TI);
+ 215   1        TI=0;
+ 216   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1522    ----
+   CONSTANT SIZE    =     80    ----
+   XDATA SIZE       =    211       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
