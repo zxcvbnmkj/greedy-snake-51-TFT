@@ -39,6 +39,4 @@ https://github.com/zxcvbnmkj/greedy-snake-51-TFT/assets/133875139/d1c5b55c-bf1f-
 
 ## 相关项目
 
-```
-本项目继承自：https://github.com/zxcvbnmkj/simulation-furniture-control-based-on-51-microcontroller
-```
+- https://github.com/zxcvbnmkj/simulation-furniture-control-based-on-51-microcontroller
